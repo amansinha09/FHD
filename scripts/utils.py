@@ -1,8 +1,6 @@
 from sklearn.metrics import f1_score
 import torch
-
-from transformers import (AutoModelForSequenceClassification,
-            AutoTokenizer)
+from transformers import (AutoModelForSequenceClassification, AutoTokenizer)
 
 import random, os
 import numpy as np 
@@ -11,7 +9,6 @@ def seed_everything(seed: int):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
-    #tf.random.set_seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
@@ -37,8 +34,7 @@ def compute_score(hazards_true, products_true, hazards_pred, products_pred):
 
 def predict(texts, model_path, model_name='bert'):
     # Load the saved tokenizer and the saved model
-    tokenizer = AutoTokenizer.from_pretrained(model_name) # moved to Auto
-    #model = BertForSequenceClassification.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     
 
