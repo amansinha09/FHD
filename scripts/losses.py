@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 def compute_class_weights_as_list(sample_counts):
     """

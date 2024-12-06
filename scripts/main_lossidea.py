@@ -42,7 +42,7 @@ MODEL_NAME = args.model_name
 LOSSFN = args.whichloss
 EPOCHS = args.num_epochs
 MAXLEN = 256
-SEED = 7869786976
+SEED = 786879
 
 
 seed_everything(SEED)
@@ -147,7 +147,7 @@ for label in tqdm(['hazard-category', 'product-category', 'hazard', 'product']):
     gold_labels = label_encoder.inverse_transform(test_df.label.values)
     print(classification_report(gold_labels, predicted_labels, zero_division=0))
 
-    model.save_pretrained(SAVEDIR+f"bert_{label}")
+    model.save_pretrained(SAVEDIR+f"bert_{label}_{LOSSFN}")
     #break
     
 # ========================= inference =================================================
@@ -173,7 +173,7 @@ for label in tqdm(['hazard', 'product']):
   # Decode predictions back to string labels
   label_encoder = LabelEncoder()
   label_encoder.fit(data[label])
-  valid_predictions[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}', MODEL_NAME)
+  valid_predictions[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}', MODEL_NAME)
   valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
 # save predictions
