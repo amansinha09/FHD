@@ -182,13 +182,13 @@ if __name__ == "__main__":
       label_encoder = LabelEncoder()
       label_encoder.fit(data[label])
       # valid_predictions[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}', MODEL_NAME)
-      # valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.dir, f'bert_{label}'), MODEL_NAME)
-      valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.dir, f'bert_{label}'), MODEL_NAME)
+      # valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+      valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
     # save predictions
     solution = pd.DataFrame({'hazard': valid_predictions['hazard'], 'product': valid_predictions['product']})
     # solution.to_csv(SAVEDIR +f'submission_bert_{LOSSFN}_st2.csv', index=False)
-    solution.to_csv(os.path.join(args.dir, "submission_st2.csv"), index=False)
+    solution.to_csv(os.path.join(args.logdir, "submission_st2.csv"), index=False)
     print("submission ST2 created!")
 
