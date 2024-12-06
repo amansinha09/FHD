@@ -104,7 +104,7 @@ for label in tqdm(['hazard-category', 'product-category', 'hazard', 'product']):
     
     custom_loss_fn = CustomLoss(whichloss = LOSSFN,
                                class_count = class_count)
-
+    #comment it for inference only #"""
     model.train()
     #progress_bar = tqdm(range(num_training_steps))
     print("training starting ..")
@@ -149,17 +149,17 @@ for label in tqdm(['hazard-category', 'product-category', 'hazard', 'product']):
 
     model.save_pretrained(SAVEDIR+f"bert_{label}_{LOSSFN}")
     #break
-    
+    #
 # ========================= inference =================================================
 ##### PREDICTIONS #####
-
+print("********************************* INFERENCE ******************************************")
 # prediction ST1
 valid_predictions_category = {}
 for label in tqdm(['hazard-category', 'product-category']):
   # Decode predictions back to string labels
   label_encoder = LabelEncoder()
   label_encoder.fit(data[label])
-  valid_predictions_category[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}',MODEL_NAME)
+  valid_predictions_category[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}',MODEL_NAME)
   valid_predictions_category[label] = label_encoder.inverse_transform(valid_predictions_category[label])
 
 # save predictions
