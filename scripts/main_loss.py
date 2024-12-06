@@ -20,23 +20,23 @@ from utils import predict, seed_everything
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-data_dir','--data_dir', type=str, help='Path to FHD folder', default='/kaggle/input/fhd-data/')
-# parser.add_argument('-save_dir','--save_dir', type=str, help='Path to LOG folder', default='/kaggle/working/')
-parser.add_argument('-whichloss','--whichloss', type=str, help='Type of loss', default='softmax', choices=['softmax', 'wsoftmax', 'focalloss', 
+parser.add_argument('-which_loss','--which_loss', type=str, help='Type of loss', default='softmax', choices=['softmax', 'wsoftmax', 'focalloss',
                                                                                                                            'classbalancedloss', 'balancedsoftmax',
                                                                                                                            'equalizationloss', 'ldamloss'])
-parser.add_argument('-model_name','--model_name', type=str, help='Name of model', default='bert-base-uncased')
-parser.add_argument('-num_epochs','--num_epochs', type=int, help='Number of epochs', default=10)
+parser.add_argument('-epochs','--epochs', type=int, help='Number of epochs', default=10)
 parser.add_argument("--batch_size", default=8, type=int, help="Batch size.")
 parser.add_argument("--learning_rate", default=5e-5, type=float, help="Learning rate.")
+parser.add_argument('-model_name','--model_name', type=str, help='Name of model', default='bert-base-uncased')
+parser.add_argument('-data_dir','--data_dir', type=str, help='Path to FHD folder', default='/kaggle/input/fhd-data/')
+# parser.add_argument('-save_dir','--save_dir', type=str, help='Path to LOG folder', default='/kaggle/working/')
 
 args = parser.parse_args()
 
 DATADIR = args.data_dir
 # SAVEDIR = args.save_dir
 MODEL_NAME = args.model_name
-LOSSFN = args.whichloss
-EPOCHS = args.num_epochs
+LOSSFN = args.which_loss
+EPOCHS = args.epochs
 MAXLEN = 256
 SEED = 786879
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     args.logdir = os.path.join("logs", "{}-{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
         datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items()) if k != "dir"))
     ))
 
     for label in tqdm(['hazard-category', 'product-category', 'hazard', 'product']):
@@ -95,8 +95,7 @@ if __name__ == "__main__":
 
         # training
         optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
-        num_epochs = EPOCHS
-        num_training_steps = num_epochs * len(train_dataloader)
+        num_training_steps = EPOCHS * len(train_dataloader)
         lr_scheduler = get_scheduler(
             name="linear",
             optimizer=optimizer,
@@ -114,7 +113,7 @@ if __name__ == "__main__":
         print("Training starting...")
         total_loss_list = []
 
-        for epoch in (range(num_epochs)):
+        for epoch in (range(EPOCHS)):
             curr_ep_loss = 0
             t1 = time.time()
             for batch in tqdm(train_dataloader, desc=f"epoch={epoch+1}"):
@@ -157,6 +156,12 @@ if __name__ == "__main__":
     print("********************************* INFERENCE ******************************************")
 
     os.makedirs(args.logdir, exist_ok=True)
+
+    # Create a txt file listing args and values
+    args_txt_path = os.path.join(args.logdir, "args_list.txt")
+    with open(args_txt_path, "w") as args_file:
+        for k, v in sorted(vars(args).items()):
+            args_file.write(f"{k}: {v}\n")
 
     # prediction ST1
     valid_predictions_category = {}
