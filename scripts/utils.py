@@ -32,7 +32,7 @@ def compute_score(hazards_true, products_true, hazards_pred, products_pred):
   return (f1_hazards + f1_products) / 2.
 
 
-def predict(texts, model_path, model_name='bert'):
+def predict(texts, model_path, model_name='bert-base-uncased'):
     # Load the saved tokenizer and the saved model
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)

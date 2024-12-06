@@ -42,19 +42,20 @@ SEED = 786879
 
 seed_everything(SEED)
 
-# ======================= dataset loading ==================================
-
-data = pd.read_csv(DATADIR +'data/incidents_train.csv', index_col=0)
-valid = pd.read_csv(DATADIR+'data/incidents_dev.csv', index_col=0)
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-
 def tokenize_function(examples):
-    return tokenizer(examples['title'], padding='max_length', max_length=MAXLEN, truncation=True)
+    # return tokenizer(examples['title'], padding='max_length', max_length=MAXLEN, truncation=True)
+    return tokenizer(examples['text'], padding='max_length', max_length=MAXLEN, truncation=True)
 
 # ========================== main run =====================================
 
 if __name__ == "__main__":
+
+    # ======================= dataset loading ==================================
+
+    data = pd.read_csv(DATADIR + 'data/incidents_train.csv', index_col=0)
+    valid = pd.read_csv(DATADIR + 'data/incidents_dev.csv', index_col=0)
+
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
     args = parser.parse_args([] if "__file__" not in globals() else None)
 
@@ -79,7 +80,7 @@ if __name__ == "__main__":
         test_dataset = Dataset.from_pandas(test_df)
         train_dataset = train_dataset.map(tokenize_function, batched=True)
         test_dataset = test_dataset.map(tokenize_function, batched=True)
-        print(train_dataset)
+        # print(train_dataset)
 
         data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding='max_length', max_length=MAXLEN)
         train_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
@@ -164,7 +165,8 @@ if __name__ == "__main__":
       label_encoder = LabelEncoder()
       label_encoder.fit(data[label])
       # valid_predictions_category[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}',MODEL_NAME)
-      valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'))
+      # valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+      valid_predictions_category[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       valid_predictions_category[label] = label_encoder.inverse_transform(valid_predictions_category[label])
 
     # save predictions
@@ -180,7 +182,8 @@ if __name__ == "__main__":
       label_encoder = LabelEncoder()
       label_encoder.fit(data[label])
       # valid_predictions[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}', MODEL_NAME)
-      valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.dir, f'bert_{label}'))
+      # valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.dir, f'bert_{label}'), MODEL_NAME)
+      valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.dir, f'bert_{label}'), MODEL_NAME)
       valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
     # save predictions
