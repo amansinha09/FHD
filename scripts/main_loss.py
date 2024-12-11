@@ -20,14 +20,14 @@ from utils import predict, seed_everything
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-which_loss','--which_loss', type=str, help='Type of loss', default='softmax', choices=['softmax', 'wsoftmax', 'focalloss',
-                                                                                                                           'classbalancedloss', 'balancedsoftmax',
-                                                                                                                           'equalizationloss', 'ldamloss'])
-parser.add_argument('-epochs','--epochs', type=int, help='Number of epochs', default=10)
-parser.add_argument("--batch_size", default=8, type=int, help="Batch size.")
-parser.add_argument("--learning_rate", default=5e-5, type=float, help="Learning rate.")
-parser.add_argument('-model_name','--model_name', type=str, help='Name of model', default='bert-base-uncased')
-parser.add_argument('-data_dir','--data_dir', type=str, help='Path to FHD folder', default='/kaggle/input/fhd-data/')
+parser.add_argument('-which_loss','--which_loss', type=str, help='Type of loss', default='softmax',
+                    choices=['softmax', 'wsoftmax', 'focalloss', 'classbalancedloss', 'balancedsoftmax', 'equalizationloss', 'ldamloss'])
+parser.add_argument('-epochs', '--epochs', type=int, help='Number of epochs', default=10)
+parser.add_argument("-batch_size", "--batch_size", default=8, type=int, help="Batch size.")
+parser.add_argument("-learning_rate", "--learning_rate", default=5e-5, type=float, help="Learning rate.")
+parser.add_argument('-input', '--input', type=str, help='What to train on (text/title).', default='title', choices=['title', 'text'])
+parser.add_argument('-model_name', '--model_name', type=str, help='Name of model', default='bert-base-uncased')
+parser.add_argument('-data_dir', '--data_dir', type=str, help='Path to FHD folder', default='/kaggle/input/fhd-data/')
 # parser.add_argument('-save_dir','--save_dir', type=str, help='Path to LOG folder', default='/kaggle/working/')
 
 args = parser.parse_args()
@@ -43,8 +43,7 @@ SEED = 786879
 seed_everything(SEED)
 
 def tokenize_function(examples):
-    # return tokenizer(examples['title'], padding='max_length', max_length=MAXLEN, truncation=True)
-    return tokenizer(examples['text'], padding='max_length', max_length=MAXLEN, truncation=True)
+    return tokenizer(examples[f'{args.input}'], padding='max_length', max_length=MAXLEN, truncation=True)
 
 # ========================== main run =====================================
 
@@ -169,14 +168,11 @@ if __name__ == "__main__":
       # Decode predictions back to string labels
       label_encoder = LabelEncoder()
       label_encoder.fit(data[label])
-      # valid_predictions_category[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}',MODEL_NAME)
-      # valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
-      valid_predictions_category[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+      valid_predictions_category[label] = predict(valid.args.input.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       valid_predictions_category[label] = label_encoder.inverse_transform(valid_predictions_category[label])
 
     # save predictions
     solution = pd.DataFrame({'hazard-category': valid_predictions_category['hazard-category'], 'product-category': valid_predictions_category['product-category']})
-    # solution.to_csv(SAVEDIR+f'submission_bert_{LOSSFN}_st1.csv', index=False)
     solution.to_csv(os.path.join(args.logdir, "submission_st1.csv"), index=False)
     print("submission ST1 created!")
 
@@ -186,14 +182,11 @@ if __name__ == "__main__":
       # Decode predictions back to string labels
       label_encoder = LabelEncoder()
       label_encoder.fit(data[label])
-      # valid_predictions[label] = predict(valid.title.to_list(), SAVEDIR+f'bert_{label}_{LOSSFN}', MODEL_NAME)
-      # valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
-      valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+      valid_predictions[label] = predict(valid.args.input.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
     # save predictions
     solution = pd.DataFrame({'hazard': valid_predictions['hazard'], 'product': valid_predictions['product']})
-    # solution.to_csv(SAVEDIR +f'submission_bert_{LOSSFN}_st2.csv', index=False)
     solution.to_csv(os.path.join(args.logdir, "submission_st2.csv"), index=False)
     print("submission ST2 created!")
 
