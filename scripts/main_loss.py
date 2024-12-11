@@ -147,7 +147,6 @@ if __name__ == "__main__":
         gold_labels = label_encoder.inverse_transform(test_df.label.values)
         print(classification_report(gold_labels, predicted_labels, zero_division=0))
 
-        # model.save_pretrained(SAVEDIR+f"bert_{label}_{LOSSFN}")
         model.save_pretrained(os.path.join(args.logdir, f"bert_{label}"))
         #break
 
