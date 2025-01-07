@@ -185,7 +185,7 @@ if __name__ == "__main__":
       label_encoder = LabelEncoder()
       label_encoder.fit(data[label])
       if args.input == 'text':
-          valid_predictions[label] = predict(valid.args.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+          valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       elif args.input == 'title':
           valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
