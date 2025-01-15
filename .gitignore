@@ -1,3 +1,6 @@
 scripts/__pycache__/
 food-hazard-detection-semeval-2025.github.io/
 scripts/LOGS/
+scripts/shells/*.sh
+scripts/shells/*.log
+scripts/shells/LOGS

@@ -11,13 +11,17 @@ from utils import predict
 parser = argparse.ArgumentParser()
 parser.add_argument('-model_name', '--model_name', type=str, help='Name of model', default='bert-base-uncased')
 parser.add_argument('-data_dir', '--data_dir', type=str, help='Path to FHD folder', default='')
-parser.add_argument('-input', '--input', type=str, help='What to train on (text/title).', default='title', choices=['title', 'text'])
+parser.add_argument('-input', '--input', type=str, help='What to train on (text/title).', default='title', choices=['title', 'text', 'tt'])
 parser.add_argument('-logdir', '--logdir', type=str, help='Path to an existing logdir to store submissions.', default='..')
 
 args = parser.parse_args()
 
 data = pd.read_csv(args.data_dir + 'data/incidents_train.csv', index_col=0)
-valid = pd.read_csv(args.data_dir + 'data/incidents_dev.csv', index_col=0)
+valid = pd.read_csv(args.data_dir + 'data/incidents_valid.csv', index_col=0)
+
+data["tt"] = data["title"] + "[SEP]" + data["text"]
+valid["tt"] = valid["title"] + "[SEP]" + valid["text"]
+
 
 print("********************************* INFERENCE ******************************************")
 
@@ -31,6 +35,9 @@ for label in ['hazard-category', 'product-category']:
         valid_predictions_category[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), args.model_name)
     elif args.input == 'title':
         valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), args.model_name)
+    elif args.input == 'tt':
+          valid_predictions_category[label] = predict(valid.tt.to_list(), os.path.join(args.logdir, f'bert_{label}'), args.model_name)
+
     valid_predictions_category[label] = label_encoder.inverse_transform(valid_predictions_category[label])
 
 # save predictions
@@ -49,6 +56,8 @@ for label in ['hazard', 'product']:
         valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), args.model_name)
     elif args.input == 'title':
         valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), args.model_name)
+    elif args.input == 'tt':
+          valid_predictions[label] = predict(valid.tt.to_list(), os.path.join(args.logdir, f'bert_{label}'), args.model_name)
     valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
 # save predictions
