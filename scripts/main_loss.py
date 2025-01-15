@@ -205,6 +205,9 @@ if __name__ == "__main__":
           valid_predictions_category[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       elif args.input == 'title':
           valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+      elif args.input == 'tt':
+          valid_predictions_category[label] = predict(valid.tt.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+
       valid_predictions_category[label] = label_encoder.inverse_transform(valid_predictions_category[label])
 
     # save predictions
@@ -222,6 +225,9 @@ if __name__ == "__main__":
           valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       elif args.input == 'title':
           valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+      elif args.input == 'tt':
+          valid_predictions[label] = predict(valid.tt.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+
       valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
     # save predictions
