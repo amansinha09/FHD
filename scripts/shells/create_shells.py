@@ -10,7 +10,7 @@ hyperparams = {
     "learning_rate": [1e-5, 3e-5, 5e-5],
     "input": ["tt"], #["title", "text", "tt"],
     "model_name": ["bert-base-uncased"], # "roberta-base", "distilbert-base-uncased", "albert-base-v2", "google/electra-base-discriminator"],
-    "data_dir": ["./data"],
+    "data_dir": ["/scratch/project_2007780/amasi/FHD/"],
     "seed": [7897,45689, 78907],
     "maxlen": [512],
     "patience": [3]
@@ -21,7 +21,7 @@ keys, values = zip(*hyperparams.items())
 hyperparam_combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
 
-script_name = "/scratch/project_2007780/amasi/FHD/main_loss.py"
+script_name = "/scratch/project_2007780/amasi/FHD/scripts/main_loss.py"
 
 # Create directory to store results
 #results_dir = "./results"

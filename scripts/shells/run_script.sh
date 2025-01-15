@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the directory containing the job scripts
-script_dir="shells/"  # Change this to your script directory
+script_dir="./"  # Change this to your script directory
 
 # Iterate over each file that starts with the specified prefix
 for script in "${script_dir}bert"*; do
