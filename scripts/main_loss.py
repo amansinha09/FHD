@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, f1_score
 from tqdm import tqdm
 
 from collections import Counter
@@ -25,20 +25,21 @@ parser.add_argument('-which_loss','--which_loss', type=str, help='Type of loss',
 parser.add_argument('-epochs', '--epochs', type=int, help='Number of epochs', default=10)
 parser.add_argument("-batch_size", "--batch_size", default=8, type=int, help="Batch size.")
 parser.add_argument("-learning_rate", "--learning_rate", default=5e-5, type=float, help="Learning rate.")
-parser.add_argument('-input', '--input', type=str, help='What to train on (text/title).', default='title', choices=['title', 'text'])
+parser.add_argument('-input', '--input', type=str, help='What to train on (text/title).', default='title', choices=['title', 'text', 'tt']) #tt = title+text
 parser.add_argument('-model_name', '--model_name', type=str, help='Name of model', default='bert-base-uncased')
 parser.add_argument('-data_dir', '--data_dir', type=str, help='Path to FHD folder', default='/kaggle/input/fhd-data/')
-# parser.add_argument('-save_dir','--save_dir', type=str, help='Path to LOG folder', default='/kaggle/working/')
+parser.add_argument('-seed','--seed', type=int, help='Experiment seed', default=786879)
+parser.add_argument('-maxlen','--maxlen', type=int, help='maxlen', default=256)
+parser.add_argument('-patience','--patience', type=int, help='early stopping patience', default=3)
 
 args = parser.parse_args()
 
 DATADIR = args.data_dir
-# SAVEDIR = args.save_dir
 MODEL_NAME = args.model_name
 LOSSFN = args.which_loss
 EPOCHS = args.epochs
-MAXLEN = 256
-SEED = 786879
+MAXLEN = args.maxlen
+SEED = args.seed
 
 seed_everything(SEED)
 
@@ -54,16 +55,26 @@ if __name__ == "__main__":
     data = pd.read_csv(DATADIR + 'data/incidents_train.csv', index_col=0)
     valid = pd.read_csv(DATADIR + 'data/incidents_dev.csv', index_col=0)
 
+    # adding title+text columns
+    data["tt"] = data["title"] + "[SEP]" + data["text"]
+    valid["tt"] = valid["title"] + "[SEP]" + valid["text"]
+
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
     args = parser.parse_args([] if "__file__" not in globals() else None)
 
     # Create logdir name
-    args.logdir = os.path.join("logs", "{}-{}-{}".format(
-        os.path.basename(globals().get("__file__", "notebook")),
-        datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items()) if k != 'data_dir'))
-    ))
+    #args.logdir = os.path.join("logs", "{}-{}-{}".format(
+    #    os.path.basename(globals().get("__file__", "notebook")),
+    #    datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+    #    ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items()) if k != 'data_dir'))
+    #))
+
+    #create a LOGS/ folder if doesn't exist
+
+    args.logdir = 'LOGS/'+ datetime.datetime.now().strftime("%Y%m%d%H%M%S") + f'_seed.{SEED}_wl.{LOSSFN}_ep.{EPOCHS}_lr.{args.learning_rate}_plm.{MODEL_NAME}_maxlen.{MAXLEN}_bs.{args.batch_size}_input.{args.input}'
+
+    print(args)
 
     for label in tqdm(['hazard-category', 'product-category', 'hazard', 'product']):
         label_encoder = LabelEncoder()
@@ -74,7 +85,7 @@ if __name__ == "__main__":
         data['label'] = data[f'{label}_label']
 
         # Data preprocessing
-        train_df, test_df = train_test_split(data, test_size=0.2, random_state=42)
+        train_df, test_df = train_test_split(data, test_size=0.2, random_state=SEED)
         train_dataset = Dataset.from_pandas(train_df)
         test_dataset = Dataset.from_pandas(test_df)
         train_dataset = train_dataset.map(tokenize_function, batched=True)
@@ -111,6 +122,9 @@ if __name__ == "__main__":
         # progress_bar = tqdm(range(num_training_steps))
         print("Training starting...")
         total_loss_list = []
+        best_val_loss = float("inf")
+        patience = args.patience  # Number of epochs to wait for improvement
+        patience_counter = 0
 
         for epoch in (range(EPOCHS)):
             curr_ep_loss = 0
@@ -130,25 +144,45 @@ if __name__ == "__main__":
                 optimizer.zero_grad()
                 #progress_bar.update(1)
             t2 = time.time()
-            print(f"Epoch {epoch + 1}, Loss: {curr_ep_loss:.4f} | Time : {(t2-t1):.4f} seconds")
+            curr_ep_loss /= len(train_dataloader)
+            #print(f"Epoch {epoch + 1}, Loss: {curr_ep_loss:.4f} | Time : {(t2-t1):.4f} seconds")
 
-        # assess model
-        model.eval()
-        total_predictions = []
-        with torch.no_grad():
-            for batch in test_dataloader:
-                inputs = {k: v.to('cuda') for k, v in batch.items() if k not in ['labels']}  # Move batch to GPU if available
-                labels = {k: v.to('cuda') for k, v in batch.items() if k in ['labels']}
-                outputs = model(**inputs)
-                predictions = torch.argmax(outputs.logits, dim=-1)
-                total_predictions.extend([p.item() for p in predictions])
+            # assess model
+            model.eval()
+            val_loss = 0
+            total_predictions = []
+            with torch.no_grad():
+                for batch in test_dataloader:
+                    inputs = {k: v.to('cuda') for k, v in batch.items() if k not in ['labels']}  # Move batch to GPU if available
+                    labels = {k: v.to('cuda') for k, v in batch.items() if k in ['labels']}
+                    outputs = model(**inputs)
+                    val_loss += custom_loss_fn(outputs.logits, **labels).item()
+                    predictions = torch.argmax(outputs.logits, dim=-1)
+                    total_predictions.extend([p.item() for p in predictions])
 
-        predicted_labels = label_encoder.inverse_transform(total_predictions)
-        gold_labels = label_encoder.inverse_transform(test_df.label.values)
-        print(classification_report(gold_labels, predicted_labels, zero_division=0))
+            val_loss /= len(test_dataloader)
+            predicted_labels = label_encoder.inverse_transform(total_predictions)
+            gold_labels = label_encoder.inverse_transform(test_df.label.values)
+            valf1 = f1_score(gold_labels, predicted_labels, average='macro')
 
-        model.save_pretrained(os.path.join(args.logdir, f"bert_{label}"))
-        #break
+            print(f"Epoch {epoch + 1}, TrainLoss: {curr_ep_loss:.4f} | ValLoss: {val_loss:.4f} | ValF1: {valf1:.4f} | Time : {(t2-t1):.4f} seconds")
+            #print(f1_score(gold_labels, predicted_labels, average='macro'))
+
+            #model.save_pretrained(os.path.join(args.logdir, f"bert_{label}"))
+            #break
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0  # Reset counter if validation loss improves
+                print("Validation loss improved, saving model...")
+                #torch.save(model.state_dict(), "best_model.pth")  # Save the model
+                model.save_pretrained(os.path.join(args.logdir, f"bert_{label}"))
+            else:
+                patience_counter += 1
+                print(f"No improvement in validation loss for {patience_counter} epoch(s).")
+
+            if patience_counter >= patience:
+                print("Early stopping triggered. Stopping training.")
+                break
 
     # ========================= inference =================================================
     print("********************************* INFERENCE ******************************************")
@@ -187,7 +221,7 @@ if __name__ == "__main__":
       if args.input == 'text':
           valid_predictions[label] = predict(valid.text.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       elif args.input == 'title':
-          valid_predictions_category[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
+          valid_predictions[label] = predict(valid.title.to_list(), os.path.join(args.logdir, f'bert_{label}'), MODEL_NAME)
       valid_predictions[label] = label_encoder.inverse_transform(valid_predictions[label])
 
     # save predictions
