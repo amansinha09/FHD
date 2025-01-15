@@ -21,7 +21,7 @@ keys, values = zip(*hyperparams.items())
 hyperparam_combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
 
-script_name = "main_loss.py"
+script_name = "/scratch/project_2007780/amasi/FHD/main_loss.py"
 
 # Create directory to store results
 #results_dir = "./results"
@@ -33,8 +33,17 @@ script_name = "main_loss.py"
 name2plm = {"bert-base-uncased":"bert", "roberta-base":"roberta", "distilbert-base-uncased":"distilbert", "albert-base-v2":"alberta", "google/electra-base-discriminator":"electra"}
 
 i=0
-message = f"""
-#!/bin/bash
+
+for cc, combination in enumerate(hyperparam_combinations):
+    # Construct the command
+    
+    cmd = [
+        "python", script_name
+    ] + [
+        f"--{key} {value}" for key, value in combination.items()
+    ]
+
+    message = f"""#!/bin/bash
 
 # Add the SBATCH directives
 #SBATCH --job-name={name2plm[hyperparams["model_name"][0]]}.{i+1}
@@ -57,19 +66,8 @@ logdir=/scratch/project_2007780/amasi/FHD/shells
 
 export HF_HOME=/scratch/project_2005099/members/mickusti/cerberus/hf
 
+   """
 
-
-"""
-
-
-for cc, combination in enumerate(hyperparam_combinations):
-    # Construct the command
-    
-    cmd = [
-        "python", script_name
-    ] + [
-        f"--{key} {value}" for key, value in combination.items()
-    ]
     with open(f'{name2plm[hyperparams["model_name"][0]]}.{i+1}.sh', 'w') as fp:
         print(message, file=fp)
         print(' '.join(cmd), file=fp)
