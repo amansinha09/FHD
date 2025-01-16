@@ -1,73 +1,75 @@
 import pandas as pd
 import argparse
 import os
+import json
 from datetime import datetime
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-l', '--label', type=str, help='Label of the category.')
-parser.add_argument('-i1', '--input1', type=str, help='Subfolder 1 with predictions.')
-parser.add_argument('-i2', '--input2', type=str, help='Subfolder 2 with predictions.')
-parser.add_argument('-i3', '--input3', type=str, help='Subfolder 3 with predictions.')
-parser.add_argument('-i4', '--input4', type=str, help='Subfolder 4 with predictions.')
-parser.add_argument('-i5', '--input5', type=str, help='Subfolder 5 with predictions.')
+parser.add_argument('-l', '--label', type=str, help='Label of the category.', required=True)
+parser.add_argument('-i', '--input_json', type=str, help='Path to a JSON file with lists of subfolders containing predictions.', required=True)
+parser.add_argument('-n', '--num_files', type=int, help='Number of files to select from the list for the given label.', required=True)
+
 args = parser.parse_args()
 
-ensemble_dir = './scripts/LOGS/LOGS'  # inside FHD
+ensemble_dir = './scripts/LOGS/LOGS'  # Directory for ensemble predictions
 
 if args.label in ['hazard-category', 'product-category']:
-    submission_file = 'submission_st1.csv'
+    submission_files = ['submission_st1.csv', 'test_submission_st1.csv']
 elif args.label in ['hazard', 'product']:
-    submission_file = 'submission_st2.csv'
+    submission_files = ['submission_st2.csv', 'test_submission_st2.csv']
 else:
     raise ValueError("Invalid label.")
 
-# Load prediction files from the subfolders
-file1 = pd.read_csv(f'{ensemble_dir}/{args.input1}/{submission_file}')
-file2 = pd.read_csv(f'{ensemble_dir}/{args.input2}/{submission_file}')
-file3 = pd.read_csv(f'{ensemble_dir}/{args.input3}/{submission_file}')
-file4 = pd.read_csv(f'{ensemble_dir}/{args.input4}/{submission_file}')
-file5 = pd.read_csv(f'{ensemble_dir}/{args.input5}/{submission_file}')
+with open(args.input_json, 'r') as f:
+    input_data = json.load(f)
+
+if args.label not in input_data:
+    raise ValueError(f"Label '{args.label}' not found in the input JSON.")
+
+input_folders = input_data[args.label]
+selected_folders = input_folders[:args.num_files]
+
 
 def ensemble_predictions(label, files):
     votes = pd.concat([file[label] for file in files], axis='columns')
-    return votes.mode(axis='columns').iloc[:, 0]
+    return votes.mode(axis='columns').iloc[:, 0], len(files)
 
-ensembled = ensemble_predictions(args.label, [file1, file2, file3, file4, file5])
+
+def process_files(label, selected_folders, submission_file, output_dir):
+    files = []
+    for input_folder in selected_folders:
+        file_path = os.path.join(ensemble_dir, input_folder, submission_file)
+        files.append(pd.read_csv(file_path))
+
+    ensembled, number_of_files = ensemble_predictions(label, files)
+
+    if 'test' in submission_file:
+        output_file_name = f'ensemble_{label}_test.csv'
+    else:
+        output_file_name = f'ensemble_{label}.csv'
+
+    output_csv_path = os.path.join(output_dir, output_file_name)
+    pd.DataFrame({label: ensembled}).to_csv(output_csv_path, index=False)
+
+    return output_file_name
+
 
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
 base_output_dir = 'ensembled_results'
 os.makedirs(base_output_dir, exist_ok=True)
-
-output_dir = os.path.join(base_output_dir, f'ensemble_{args.label}_{timestamp}')
+output_dir = os.path.join(base_output_dir, f'ens_{len(selected_folders)}_{args.label}_{timestamp}')
 os.makedirs(output_dir, exist_ok=True)
 
-output_csv_path = os.path.join(output_dir, f'ensemble_{args.label}.csv')
-pd.DataFrame({args.label: ensembled}).to_csv(output_csv_path, index=False)
+all_input_files = set()
 
-# Create a text file listing the input files used
-input_files_list = [
-    f'{ensemble_dir}/{args.input1}/{submission_file}',
-    f'{ensemble_dir}/{args.input2}/{submission_file}',
-    f'{ensemble_dir}/{args.input3}/{submission_file}',
-    f'{ensemble_dir}/{args.input4}/{submission_file}',
-    f'{ensemble_dir}/{args.input5}/{submission_file}'
-]
+output_file_names = []
+for submission_file in submission_files:
+    output_file_name = process_files(args.label, selected_folders, submission_file, output_dir)
+    output_file_names.append(output_file_name)
 
 output_txt_path = os.path.join(output_dir, 'input_files.txt')
 with open(output_txt_path, 'w') as f:
-    for file_path in input_files_list:
+    for file_path in selected_folders:
         f.write(file_path + '\n')
 
-print(f"Sub-task category {args.label} ensembling completed and saved in {output_dir}.")
-
-# # Merge the four ensembled outputs into a final submission file
-# final_submission = pd.DataFrame({
-#     'hazard-category': hazard_category,
-#     'product-category': product_category,
-#     'hazard': hazard,
-#     'product': product
-# })
-#
-# final_submission.to_csv('final_ensembled_submission.csv', index=False)
-# print("Final submission file created!")
+print(f"Ensembling completed for {args.label}. Results saved in {output_dir} with files: {', '.join(output_file_names)}.")
