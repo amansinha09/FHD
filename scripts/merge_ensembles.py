@@ -2,25 +2,30 @@ import pandas as pd
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-hc', '--hazard_category', type=str, help='Path to the hazard-category ensemble file.')
-parser.add_argument('-pc', '--product_category', type=str, help='Path to the product-category ensemble file.')
-parser.add_argument('-h', '--hazard', type=str, help='Path to the hazard ensemble file.')
-parser.add_argument('-p', '--product', type=str, help='Path to the product ensemble file.')
+parser.add_argument('--hazard_category', type=str, help='Path to the hazard-category ensemble folder.')
+parser.add_argument('--product_category', type=str, help='Path to the product-category ensemble folder.')
+parser.add_argument('--hazard', type=str, help='Path to the hazard ensemble folder.')
+parser.add_argument('--product', type=str, help='Path to the product ensemble folder.')
+parser.add_argument('-plm', '--plm', type=str, help='Language model used.', default='bert')
 args = parser.parse_args()
 
-hazard_category_df = pd.read_csv(args.hazard_category)
-product_category_df = pd.read_csv(args.product_category)
-hazard_df = pd.read_csv(args.hazard)
-product_df = pd.read_csv(args.product)
+hazard_category_df = pd.read_csv(f'./ensembled_results/{args.hazard_category}/ensemble_hazard-category.csv')
+product_category_df = pd.read_csv(f'./ensembled_results/{args.product_category}/ensemble_product-category.csv')
+hazard_df = pd.read_csv(f'./ensembled_results/{args.hazard}/ensemble_hazard.csv')
+product_df = pd.read_csv(f'./ensembled_results/{args.product}/ensemble_product.csv')
 
-final_submission = pd.concat([
-    hazard_category_df.rename(columns={'hazard-category': 'hazard-category'}),
-    product_category_df.rename(columns={'product-category': 'product-category'}),
+final_submission_st1 = pd.concat([
+    hazard_category_df.rename(columns={'hazard_category': 'hazard-category'}),
+    product_category_df.rename(columns={'product_category': 'product-category'}),
+], axis=1)
+
+final_submission_st2 = pd.concat([
     hazard_df.rename(columns={'hazard': 'hazard'}),
     product_df.rename(columns={'product': 'product'})
 ], axis=1)
 
-final_output_path = 'final_ensembled_submission.csv'
-final_submission.to_csv(final_output_path, index=False)
+final_submission_st1.to_csv(f'ens_{args.plm}_submission_st1.csv', index=False)
+print(f"Final submission file for ST1 created!")
 
-print(f"Final submission file created at {final_output_path}!")
+final_submission_st2.to_csv(f'ens_{args.plm}_submission_st2.csv', index=False)
+print(f"Final submission file for ST2 created!")
